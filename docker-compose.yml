@@ -2,8 +2,8 @@ version: '2'
 
 services:
   api:
-    ports:
-      - 8000:8000
+     #ports:
+     # - 8000:8000
     build:
       context: ./saleor
       dockerfile: ./Dockerfile
@@ -26,32 +26,40 @@ services:
     env_file: common.env
     environment:
       - JAEGER_AGENT_HOST=jaeger
-      - STOREFRONT_URL=http://localhost:3000/
-      - DASHBOARD_URL=http://localhost:9000/
+      - STOREFRONT_URL=http://thescoreproject.com/
+      - DASHBOARD_URL=http://thescoreproject.com/dashboard/
 
   storefront:
     build:
       context: ./saleor-storefront
-      dockerfile: ./Dockerfile.dev
-    ports:
-      - 3000:3000
+      dockerfile: ./Dockerfile
+      args:
+        API_URI: 'http://thescoreproject.com/graphql/'
+      #ports:
+      #- 3000:3000
     restart: unless-stopped
-    volumes:
-      - ./saleor-storefront/:/app:cached
-      - /app/node_modules/
-    command: npm start -- --host 0.0.0.0
+    networks:
+      - saleor-backend-tier
+        #volumes:
+        #- ./saleor-storefront/:/app:cached
+        #- /app/node_modules/
+        #command: npm start -- --host 0.0.0.0
 
   dashboard:
     build:
       context: ./saleor-dashboard
-      dockerfile: ./Dockerfile.dev
-    ports:
-      - 9000:9000
+      dockerfile: ./Dockerfile
+      args:
+        API_URI: 'http://thescoreproject.com/graphql/'
+        #ports:
+        #- 9000:9000
     restart: unless-stopped
-    volumes:
-      - ./saleor-dashboard/:/app:cached
-      - /app/node_modules/
-    command: npm start -- --host 0.0.0.0
+    networks:
+      - saleor-backend-tier
+    #volumes:
+    #  - ./saleor-dashboard/:/app:cached
+    #  - /app/node_modules/
+    #command: npm start -- --host 0.0.0.0
 
   db:
     image: library/postgres:11.1-alpine
@@ -120,6 +128,17 @@ services:
     restart: unless-stopped
     networks:
       - saleor-backend-tier
+
+  webserver:
+    build: ./webserver
+    container_name: nginx
+    restart: unless-stopped 
+    networks:
+      - saleor-backend-tier
+    ports:
+      - "80:80"
+    volumes:
+      - saleor-media:/app/media
 
 volumes:
   saleor-db:
